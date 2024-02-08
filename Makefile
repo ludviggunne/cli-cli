@@ -5,7 +5,7 @@ LDFLAGS=-lncurses
 EXE=cli-cli
 
 $(EXE): main.o async_reader.o tui.o
-	$(CC) -o $(EXE) $(LDFLAGS) main.o async_reader.o tui.o
+	$(CC) -o $(EXE)  main.o async_reader.o tui.o $(LDFLAGS)
 
 main.o: main.c
 	$(CC) -c main.c $(CFLAGS)
