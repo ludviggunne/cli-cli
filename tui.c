@@ -19,9 +19,8 @@
 #define TITLE_X 3
 
 enum input_state {
-    ANY = 0,
-    HISTORY,
     INPUT,
+    HISTORY,
 };
 
 static WINDOW *in_win = NULL, *out_win = NULL;
@@ -34,7 +33,6 @@ static int state = INPUT;
 static struct cmdn * head = NULL;
 static struct cmdn * curr_cmdn = NULL;
 
-static void handle_char_any(int ch);
 static void handle_char_input(int ch);
 static void handle_char_history(int ch, int first);
 
@@ -96,30 +94,6 @@ static void flush_input()
     }
     inputbuf_size = 0;
     state = INPUT;
-}
-
-static void handle_char_any(int ch)
-{
-    switch (ch)
-    {
-        case KEY_UP:
-        {
-            state = HISTORY;
-            handle_char_history(ch, 1);
-            break;
-        }
-        case ERR:
-            break;
-        default:
-        {
-            if (isprint(ch))
-            {
-                state = INPUT;
-                handle_char_input(ch);
-            }
-            break;
-        }
-    }
 }
 
 static void handle_char_input(int ch)
@@ -234,11 +208,6 @@ void tui_update(void)
     {
         switch (state)
         {
-            case ANY:
-            {
-                handle_char_any(ch);
-                break;
-            }
             case HISTORY:
             {
                 handle_char_history(ch, 0);
@@ -262,7 +231,6 @@ void tui_update(void)
     switch (state) {
         case HISTORY: statestr = "History"; break;
         case INPUT: statestr = "Input"; break;
-        case ANY: statestr = "<...>"; break;
     }
     mvwprintw(in_win, 0, TITLE_X, " %s ", statestr);
 
