@@ -14,6 +14,7 @@
 #define OUT_LINE_X 1
 #define IN_FIELD_X 4
 #define INPUTBUF_CAP 64
+#define TITLE_X 3
 
 static WINDOW *in_win = NULL, *out_win = NULL;
 static char inputbuf[INPUTBUF_CAP + 1];
@@ -47,7 +48,7 @@ void tui_write_output_line(const char * line)
     wmove(out_win, OUT_WIN_LASTLN, 0);
     wdeleteln(out_win);
     //mvwaddnstr(out_win, OUT_WIN_LASTLN, OUT_LINE_X, line, strlen(line) - 1);
-    mvwprintw(out_win, OUT_WIN_LASTLN, OUT_LINE_X, "%s: %.*s", _child_name, (int)(strlen(line) - 1), line);
+    mvwprintw(out_win, OUT_WIN_LASTLN, OUT_LINE_X, "%.*s", (int)(strlen(line) - 1), line);
 }
 
 void tui_write_output_line_n(const char * line, int length)
@@ -118,6 +119,10 @@ void tui_update(void)
 
     box(in_win, 0, 0);
     box(out_win, 0, 0);
+
+    mvwprintw(out_win, 0, TITLE_X, " Process: %s ", _child_name);
+    mvwaddstr(in_win, 0, TITLE_X, " Input ");
+
     wrefresh(in_win);
     wrefresh(out_win);
 }
