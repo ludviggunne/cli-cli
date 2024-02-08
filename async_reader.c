@@ -78,21 +78,21 @@ void reader_start (struct reader * rd)
 
 void reader_stop (struct reader * rd)
 {
-    pthread_mutex_lock(&rd->lock);
+    // cancelation required since getline() may block indefinitely
+    pthread_cancel(rd->thread);
+    pthread_join(rd->thread, NULL);
+
     if (rd->line != NULL)
     {
         free(rd->line);
         rd->line = NULL;
     }
+
     if (rd->internal != NULL)
     {
         free(rd->internal);
         rd->internal = NULL;
     }
+
     if (rd->done) return;
-    rd->done = 1;
-    pthread_mutex_unlock(&rd->lock);
-    // cancelation required since getline() may block indefinitely
-    pthread_cancel(rd->thread);
-    pthread_join(rd->thread, NULL);
 }

@@ -8,7 +8,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <assert.h>
-#include <fcntl.h>
 
 #include "async_reader.h"
 
@@ -106,20 +105,20 @@ int main(int argc, char *argv[])
                 fprintf(stdout, "%s: %s", child_name, line);
                 free(line);
             }
+
+            usleep(10);
         }
 
         goto cleanup;
     }
 
 cleanup:
+    reader_stop(&child_reader);
+    reader_stop(&user_reader);
     if (pipe_1[0] != -1) close(pipe_1[0]);
     if (pipe_1[1] != -1) close(pipe_1[1]);
     if (pipe_2[0] != -1) close(pipe_2[0]);
     if (pipe_2[1] != -1) close(pipe_2[1]);
-    if (child_read_fp != NULL) fclose(child_read_fp);
-    if (child_write_fp != NULL) fclose(child_write_fp);
-    reader_stop(&child_reader);
-    reader_stop(&user_reader);
 
     return retcode;
 }
