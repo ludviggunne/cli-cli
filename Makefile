@@ -5,7 +5,7 @@ LDFLAGS=-lncurses
 EXE=cli-cli
 
 $(EXE): main.o async_reader.o tui.o
-	$(CC) -o $(EXE)  main.o async_reader.o tui.o $(LDFLAGS)
+	$(CC) -o $(EXE)  main.o async_reader.o tui.o history.o $(LDFLAGS)
 
 main.o: main.c
 	$(CC) -c main.c $(CFLAGS)
@@ -15,6 +15,9 @@ async_reader.o: async_reader.c
 
 tui.o: tui.c
 	$(CC) -c tui.c $(CFLAGS)
+
+history.o: history.c
+	$(CC) -c history.c $(CFLAGS)
 
 .PHONY: clean
 clean:
