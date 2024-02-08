@@ -1,10 +1,12 @@
 
-#include "tui.h"
 #include <curses.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#include "tui.h"
+#include "history.h"
 
 #define IN_WIN_H 3
 #define IN_WIN_Y (LINES - IN_WIN_H)
@@ -16,12 +18,25 @@
 #define INPUTBUF_CAP 64
 #define TITLE_X 3
 
+enum input_state {
+    ANY = 0,
+    HISTORY,
+    INPUT,
+};
+
 static WINDOW *in_win = NULL, *out_win = NULL;
 static char inputbuf[INPUTBUF_CAP + 1];
 static char * input_line = NULL;
 static int inputbuf_size = 0;
 static int tui_is_init = 0;
 static const char * _child_name;
+static int state = INPUT;
+static struct cmdn * head = NULL;
+static struct cmdn * curr_cmdn = NULL;
+
+static void handle_char_any(int ch);
+static void handle_char_input(int ch);
+static void handle_char_history(int ch, int first);
 
 void tui_init(const char * child_name)
 {
@@ -47,7 +62,6 @@ void tui_write_output_line(const char * line)
     wdeleteln(out_win);
     wmove(out_win, OUT_WIN_LASTLN, 0);
     wdeleteln(out_win);
-    //mvwaddnstr(out_win, OUT_WIN_LASTLN, OUT_LINE_X, line, strlen(line) - 1);
     mvwprintw(out_win, OUT_WIN_LASTLN, OUT_LINE_X, "%.*s", (int)(strlen(line) - 1), line);
 }
 
@@ -74,19 +88,42 @@ static void flush_input()
         free(input_line);
     }
     input_line = strdup(inputbuf);
-    wmove(in_win, IN_WIN_Y + 1, 0);
+    wmove(in_win, 1, 0);
     wclrtoeol(in_win);
+    if (state != HISTORY)
+    {
+        head = cmdn_append_n(head, inputbuf, inputbuf_size);
+    }
     inputbuf_size = 0;
+    state = INPUT;
 }
 
-void tui_update(void)
+static void handle_char_any(int ch)
 {
-    int ch;
+    switch (ch)
+    {
+        case KEY_UP:
+        {
+            state = HISTORY;
+            handle_char_history(ch, 1);
+            break;
+        }
+        case ERR:
+            break;
+        default:
+        {
+            if (isprint(ch))
+            {
+                state = INPUT;
+                handle_char_input(ch);
+            }
+            break;
+        }
+    }
+}
 
-    mvwaddstr(in_win, 1, 1, ">>");
-
-    ch = wgetch(in_win);
-
+static void handle_char_input(int ch)
+{
     switch (ch)
     {
         case KEY_BACKSPACE:
@@ -99,10 +136,16 @@ void tui_update(void)
             }
             break;
         }
+        case KEY_UP:
+        {
+            state = HISTORY;
+            handle_char_history(ch, 1);
+            break;
+        }
         case 0xa:
         {
             flush_input();
-            break;
+            return;
         }
         case ERR:
             break;
@@ -116,12 +159,112 @@ void tui_update(void)
             break;
         }
     }
+}
+
+static void handle_char_history(int ch, int first)
+{
+    struct cmdn * tmp;
+    const char * cmd = NULL;
+
+    if (head == NULL)
+    {
+        state = INPUT;
+        return;
+    }
+
+    switch (ch)
+    {
+        case KEY_UP:
+        {
+            if (!first)
+            {
+                tmp = cmdn_next(curr_cmdn);
+                if (tmp)
+                {
+                    curr_cmdn = tmp;
+                }
+            }
+            else
+            {
+                curr_cmdn = head;
+            }
+            cmd = cmdn_get_cmd(curr_cmdn);
+            break;
+        }
+        case KEY_DOWN:
+        {
+            tmp = cmdn_prev(curr_cmdn);
+            if (tmp)
+            {
+                curr_cmdn = tmp;
+            }
+            cmd = cmdn_get_cmd(curr_cmdn);
+            break;
+        }
+        case 0xa:
+        {
+            flush_input();
+            state = INPUT;
+            return;
+        }
+        default:
+        {
+            state = INPUT;
+            handle_char_input(ch);
+            return;
+        }
+    }
+
+
+    inputbuf_size = strlen(cmd);
+    strcpy(inputbuf, cmd);
+
+    wmove(in_win, 1, 0);
+    wclrtoeol(in_win);
+    mvwprintw(in_win, 1, IN_FIELD_X, cmd);
+}
+
+void tui_update(void)
+{
+    int ch;
+
+    ch = wgetch(in_win);
+
+    if (ch != ERR)
+    {
+        switch (state)
+        {
+            case ANY:
+            {
+                handle_char_any(ch);
+                break;
+            }
+            case HISTORY:
+            {
+                handle_char_history(ch, 0);
+                break;
+            }
+            case INPUT:
+            {
+                handle_char_input(ch);
+                break;
+            }
+        }
+    }
+
+    mvwaddstr(in_win, 1, 1, ">>");
 
     box(in_win, 0, 0);
     box(out_win, 0, 0);
 
     mvwprintw(out_win, 0, TITLE_X, " Process: %s ", _child_name);
-    mvwaddstr(in_win, 0, TITLE_X, " Input ");
+    const char * statestr = "";
+    switch (state) {
+        case HISTORY: statestr = "History"; break;
+        case INPUT: statestr = "Input"; break;
+        case ANY: statestr = "<...>"; break;
+    }
+    mvwprintw(in_win, 0, TITLE_X, " %s ", statestr);
 
     wrefresh(in_win);
     wrefresh(out_win);
@@ -134,6 +277,7 @@ void tui_terminate(void)
         delwin(in_win);
         delwin(out_win);
         endwin();
+        cmdn_destroy(head);
     }
 }
 
