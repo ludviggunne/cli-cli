@@ -1,6 +1,6 @@
 
 CC=gcc
-CFLAGS=-Wall -Wextra -g
+CFLAGS=-Wall -Wextra -Wpedantic
 LDFLAGS=-lncurses
 EXE=cli-cli
 

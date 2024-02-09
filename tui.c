@@ -123,7 +123,7 @@ static void history_append(const char * str, int len)
     if (hcount == hcap)
     {
         hcap *= 2;
-        char ** nh = malloc(sizeof (*nh) * hcap);
+        char ** nh = _malloc(sizeof (*nh) * hcap);
         memcpy(nh, history, sizeof (*nh) * hcount);
         free(history);
         history = nh;
@@ -282,7 +282,7 @@ void tui_init(void)
     keypad(cmd_win, TRUE);
     nodelay(cmd_win, TRUE);
 
-    history = malloc(sizeof (*history) * hcap);
+    history = _malloc(sizeof (*history) * hcap);
 
     child_refresh();
     cmd_refresh();

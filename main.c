@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     chprocname = argv[1];
 
-    chargs = malloc(sizeof (*chargs) * argc);
+    chargs = _malloc(sizeof (*chargs) * argc);
     memcpy(chargs, &argv[1], sizeof (*chargs) * (argc - 1));
     chargs[argc - 1] = NULL;
 

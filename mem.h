@@ -4,16 +4,21 @@
 
 #include <stdlib.h>
 
-#define malloc(x)\
-    ({\
-     void * __ptr = malloc(x);\
-     if (__ptr == NULL)\
-     {\
-        fprintf(stderr, "error: out of memory\n");\
-        returncode = EXIT_FAILURE;\
-        cleanup(0);\
-     }\
-     __ptr;\
-     })
+extern int returncode;
+extern void cleanup(int);
+
+static inline void * _malloc(size_t size)
+{
+    void * __ptr = malloc(size);
+
+    if (__ptr == NULL)
+    {
+       fprintf(stderr, "error: out of memoryn");
+       returncode = EXIT_FAILURE;
+       cleanup(0);
+    }
+
+    return __ptr;
+}
 
 #endif
