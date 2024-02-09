@@ -19,10 +19,12 @@
 
 #define COLOR_MATCH COLOR_BLUE // we change this to gray
 #define COLOR_ERROR COLOR_RED
+#define COLOR_OK COLOR_GREEN
 
 enum color_pair {
     COLOR_PAIR_MATCH = 1,
     COLOR_PAIR_ERROR,
+    COLOR_PAIR_OK,
 };
 
 extern char ** chargs;
@@ -257,6 +259,7 @@ void tui_init(void)
     init_color(COLOR_ERROR, 800, 200, 200);
     init_pair(COLOR_PAIR_MATCH, COLOR_MATCH, -1);
     init_pair(COLOR_PAIR_ERROR, COLOR_ERROR, -1);
+    init_pair(COLOR_PAIR_OK, COLOR_OK, -1);
 
     cmd_win = newwin(CMD_WINDOW_HEIGHT, 0, CMD_WINDOW_Y, 0);
     child_win = newwin(CHILD_WINDOW_HEIGHT, 0, 0, 0);
@@ -400,8 +403,11 @@ void tui_prompt_exit(int code)
 {
     nodelay(cmd_win, FALSE);
     clear_cmdbuf_line();
+    int pair = code == 0 ? COLOR_PAIR_OK : COLOR_PAIR_ERROR;
+    wattron(cmd_win, COLOR_PAIR(pair));
     mvwprintw(cmd_win, CMD_BUFFER_Y, CMD_BUFFER_X, "%s exited with return code %d. Press any key to exit.",
             chargs[0], code);
+    wattroff(cmd_win, COLOR_PAIR(pair));
 
     box(cmd_win, 0, 0);
     wrefresh(cmd_win);
