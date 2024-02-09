@@ -105,14 +105,9 @@ static void complete_match_word(void)
     {
         int i = cmdbufsz;
         const char * cmd = history[matchid];
-        while (cmd[i] != ' ' && cmd[i] != '\0')
-        {
-            i++;
-        }
-        while (cmd[i] == ' ')
-        {
-            i++;
-        }
+        while (cmd[i] == ' ') i++;
+        while (cmd[i] != ' ' && cmd[i] != '\0') i++;
+        while (cmd[i] == ' ') i++;
         strncpy(cmdbuf, cmd, i);
         cmdbufsz = i;
     }
