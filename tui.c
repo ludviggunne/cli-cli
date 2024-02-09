@@ -123,6 +123,10 @@ static void match_back(void)
             }
         }
     }
+    else
+    {
+        match_reset();
+    }
 }
 
 static void match_forward(void)
@@ -197,7 +201,8 @@ static void flush_cmdbuf(void)
     {
         history_append(cmdbuf, cmdbufsz);
     }
-    match_reset();
+    matchid = -1;
+    //match_reset();
 }
 
 static void cmdbuf_write_char(int ch)
