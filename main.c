@@ -32,17 +32,22 @@ const char * chprocname = NULL;
 char ** chargs = NULL;
 union pipe pipe_p2c = { .r = -1, .w = -1, };
 union pipe pipe_c2p = { .r = -1, .w = -1, };
+union pipe pipe_c2p_err = { .r = -1, .w = -1, };
 struct async_read child_rd;
+struct async_read child_err_rd;
 
 void cleanup(int sig)
 {
     (void) sig;
     tui_terminate();
     async_read_stop(&child_rd);
+    async_read_stop(&child_err_rd);
     if (pipe_p2c.r != -1) close(pipe_p2c.r);
     if (pipe_p2c.w != -1) close(pipe_p2c.w);
     if (pipe_c2p.r != -1) close(pipe_c2p.r);
     if (pipe_c2p.w != -1) close(pipe_c2p.w);
+    if (pipe_c2p_err.r != -1) close(pipe_c2p_err.r);
+    if (pipe_c2p_err.w != -1) close(pipe_c2p_err.w);
     if (chargs) free(chargs);
     exit(returncode);
 }
@@ -69,7 +74,8 @@ int main(int argc, char *argv[])
     memcpy(chargs, &argv[1], sizeof (*chargs) * (argc - 1));
     chargs[argc - 1] = NULL;
 
-    if (pipe(pipe_p2c.arr) != 0 || pipe(pipe_c2p.arr) != 0)
+    if (pipe(pipe_p2c.arr) != 0 || pipe(pipe_c2p.arr) != 0 ||
+            pipe(pipe_c2p_err.arr) != 0)
     {
         fprintf(stderr, "error: unable to open pipe(s): %s\n", strerror(errno));
         returncode = EXIT_FAILURE;
@@ -87,10 +93,13 @@ int main(int argc, char *argv[])
     {
         _assert(close(pipe_p2c.w) > -1);
         _assert(close(pipe_c2p.r) > -1);
+        _assert(close(pipe_c2p_err.r) > -1);
         _assert(dup2(pipe_p2c.r, STDIN_FILENO) > -1);
         _assert(dup2(pipe_c2p.w, STDOUT_FILENO) > -1);
+        _assert(dup2(pipe_c2p_err.w, STDERR_FILENO) > -1);
         _assert(close(pipe_p2c.r) > -1);
         _assert(close(pipe_c2p.w) > -1);
+        _assert(close(pipe_c2p_err.w) > -1);
 
         if (execvp(chprocname, chargs) == -1)
         {
@@ -101,20 +110,25 @@ int main(int argc, char *argv[])
     }
     else
     {
-        FILE * child_r_fp, * child_w_fp;
+        FILE * child_r_fp, * child_w_fp, * child_err_fp;
         char * line;
 
         _assert(close(pipe_p2c.r) > -1);
         _assert(close(pipe_c2p.w) > -1);
+        _assert(close(pipe_c2p_err.w) > -1);
 
-        child_r_fp = fdopen(pipe_c2p.r, "r");
         child_w_fp = fdopen(pipe_p2c.w, "w");
+        child_r_fp = fdopen(pipe_c2p.r, "r");
+        child_err_fp = fdopen(pipe_c2p_err.r, "r");
 
-        _assert(child_r_fp != NULL);
         _assert(child_w_fp != NULL);
+        _assert(child_r_fp != NULL);
+        _assert(child_err_fp != NULL);
 
         child_rd = async_read_create(child_r_fp);
+        child_err_rd = async_read_create(child_err_fp);
         async_read_start(&child_rd);
+        async_read_start(&child_err_rd);
 
         tui_init();
 
@@ -124,6 +138,13 @@ int main(int argc, char *argv[])
             if (line)
             {
                 tui_write_line(line);
+                free(line);
+            }
+
+            line = async_read_line(&child_err_rd);
+            if (line)
+            {
+                tui_write_error(line);
                 free(line);
             }
 

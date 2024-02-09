@@ -17,8 +17,13 @@
 #define CHILD_WINDOW_LAST_LINE (CHILD_WINDOW_HEIGHT - 2)
 #define TITLE_X 3
 
-#define COLOR_MATCH COLOR_BLUE
-#define COLOR_PAIR_MATCH 1
+#define COLOR_MATCH COLOR_BLUE // we change this to gray
+#define COLOR_ERROR COLOR_RED
+
+enum color_pair {
+    COLOR_PAIR_MATCH = 1,
+    COLOR_PAIR_ERROR,
+};
 
 extern char ** chargs;
 extern int returncode;
@@ -205,7 +210,9 @@ void tui_init(void)
     start_color();
     use_default_colors();
     init_color(COLOR_MATCH,  500, 500, 500);
+    init_color(COLOR_ERROR, 800, 200, 200);
     init_pair(COLOR_PAIR_MATCH, COLOR_MATCH, -1);
+    init_pair(COLOR_PAIR_ERROR, COLOR_ERROR, -1);
 
     cmd_win = newwin(CMD_WINDOW_HEIGHT, 0, CMD_WINDOW_Y, 0);
     child_win = newwin(CHILD_WINDOW_HEIGHT, 0, 0, 0);
@@ -225,6 +232,16 @@ void tui_write_line(const char * line)
 {
     scroll_output();
     mvwaddstr(child_win, CHILD_WINDOW_LAST_LINE, 2, line);
+    //cmd_refresh();
+    child_refresh();
+}
+
+void tui_write_error(const char * line)
+{
+    scroll_output();
+    wattron(child_win, COLOR_PAIR(COLOR_PAIR_ERROR));
+    mvwaddstr(child_win, CHILD_WINDOW_LAST_LINE, 2, line);
+    wattroff(child_win, COLOR_PAIR(COLOR_PAIR_ERROR));
     //cmd_refresh();
     child_refresh();
 }
