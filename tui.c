@@ -338,12 +338,17 @@ void tui_update(void)
             update = 1;
             break;
         }
-        case '\t':
         case KEY_RIGHT:
         {
-            //complete_match();
+            complete_match();
+            //match_reset();
+            update = 1;
+            break;
+        }
+        case '\t':
+        {
             complete_match_word();
-            match_reset();
+            //match_reset();
             update = 1;
             break;
         }
