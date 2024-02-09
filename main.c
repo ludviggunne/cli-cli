@@ -163,29 +163,16 @@ int main(int argc, char *argv[])
             usleep(10);
         }
 
-        for (;;)
+        while ((line = async_read_line(&child_rd)))
         {
-            int _break = 1;
-            line = async_read_line(&child_rd);
-            if (line)
-            {
-                tui_write_line(line);
-                free(line);
-                _break = 0;
-            }
+            tui_write_line(line);
+            free(line);
+        }
 
-            line = async_read_line(&child_err_rd);
-            if (line)
-            {
-                tui_write_error(line);
-                free(line);
-                _break = 0;
-            }
-
-            if (_break)
-            {
-                break;
-            }
+        while ((line = async_read_line(&child_err_rd)))
+        {
+            tui_write_error(line);
+            free(line);
         }
 
         tui_prompt_exit(returncode);
