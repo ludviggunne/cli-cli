@@ -334,12 +334,6 @@ void tui_update(void)
             update = 1;
             break;
         }
-        case KEY_LEFT:
-        {
-            scroll_output();
-            update = 1;
-            break;
-        }
         case KEY_RIGHT:
         {
             complete_match();
