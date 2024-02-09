@@ -53,9 +53,9 @@ void cleanup(int sig)
     exit(returncode);
 }
 
-void usage(const char * name)
+void usage(FILE * f, const char * name)
 {
-    fprintf(stdout, "usage: %s PROGRAM [ARGS...]\n", name);
+    fprintf(f, "usage: %s PROGRAM [ARGS...]\n", name);
 }
 
 int main(int argc, char *argv[])
