@@ -4,14 +4,14 @@ CFLAGS=-Wall -Wextra -g
 LDFLAGS=-lncurses
 EXE=cli-cli
 
-$(EXE): main.o async_reader.o tui.o history.o
-	$(CC) -o $(EXE)  main.o async_reader.o tui.o history.o $(LDFLAGS)
+$(EXE): main.o tui.o async_read.o
+	$(CC) -o $(EXE)  main.o tui.o async_read.o $(LDFLAGS)
 
 main.o: main.c
 	$(CC) -c main.c $(CFLAGS)
 
-async_reader.o: async_reader.c
-	$(CC) -c async_reader.c $(CFLAGS)
+async_read.o: async_read.c
+	$(CC) -c async_read.c $(CFLAGS)
 
 tui.o: tui.c
 	$(CC) -c tui.c $(CFLAGS)

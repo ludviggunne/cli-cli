@@ -8,106 +8,130 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <assert.h>
+#include <signal.h>
 
-#include "async_reader.h"
+#include "async_read.h"
 #include "tui.h"
 
-#define try(x) {int __line = __LINE__;\
-    errno = 0;\
-    x;\
-    if (errno != 0)\
-    {\
-        fprintf(stderr, "error on line %d: %s: %s\n", __line, #x, strerror(errno));\
-        retcode = EXIT_FAILURE;\
-        goto cleanup;\
+#define _assert(x) { int __line = __LINE__;\
+    if (!(x)) {\
+        fprintf(stderr, "error: %d: %s: %s\n",\
+                __line, #x, strerror(errno));\
+        returncode = EXIT_FAILURE;\
+        cleanup(0);\
     }}
+
+union pipe {
+    struct { int r, w; };
+    int arr[2];
+};
+
+int returncode = EXIT_SUCCESS;
+int pid = -1;
+const char * chprocname = NULL;
+char ** chargs = NULL;
+union pipe pipe_p2c = { .r = -1, .w = -1, };
+union pipe pipe_c2p = { .r = -1, .w = -1, };
+struct async_read child_rd;
+
+void cleanup(int sig)
+{
+    (void) sig;
+    tui_terminate();
+    async_read_stop(&child_rd);
+    if (pipe_p2c.r != -1) close(pipe_p2c.r);
+    if (pipe_p2c.w != -1) close(pipe_p2c.w);
+    if (pipe_c2p.r != -1) close(pipe_c2p.r);
+    if (pipe_c2p.w != -1) close(pipe_c2p.w);
+    if (chargs) free(chargs);
+    exit(returncode);
+}
 
 void usage(const char * name)
 {
-    printf("USAGE:\n"
-           "    %s [program]\n", name);
+    fprintf(stdout, "usage: %s PROGRAM [ARGS...]\n", name);
 }
 
 int main(int argc, char *argv[])
 {
-    // streams to read & write to child
-    FILE * child_read_fp = NULL;
-    FILE * child_write_fp = NULL;
-    int pipe_1[2] = { -1, -1, };
-    int pipe_2[2] = { -1, -1, };
-    // file descriptors to replace child's stdout & stdin
-    int child_stdout, child_stdin;
-    // file descriptors to read & write to child
-    int child_read_fd, child_write_fd;
-    // async readers from user and child
-    struct reader child_reader;
-    // name fo child process
-    char * child_name = NULL;
-    int retcode;
-    pid_t pid;
-
-    retcode = EXIT_SUCCESS;
-
     if (argc < 2)
     {
-        fprintf(stderr, "error: no input\n");
+        fprintf(stderr, "error: missing input\n");
         usage(argv[0]);
-        return EX_USAGE;
+        return EXIT_FAILURE;
     }
-    child_name = argv[1];
 
-    try( pipe(pipe_1) );
-    try( pipe(pipe_2) );
+    signal(SIGINT, cleanup);
 
-    child_stdin    = pipe_1[0];
-    child_stdout   = pipe_2[1];
-    child_write_fd = pipe_1[1];
-    child_read_fd  = pipe_2[0];
+    chprocname = argv[1];
+
+    chargs = malloc(sizeof (*chargs) * argc);
+    memcpy(chargs, &argv[1], sizeof (*chargs) * (argc - 1));
+    chargs[argc - 1] = NULL;
+
+    if (pipe(pipe_p2c.arr) != 0 || pipe(pipe_c2p.arr) != 0)
+    {
+        fprintf(stderr, "error: unable to open pipe(s): %s\n", strerror(errno));
+        returncode = EXIT_FAILURE;
+        cleanup(0);
+    }
 
     pid = fork();
     if (pid < 0)
     {
-        fprintf(stderr, "error: unable to fork process: %s\n", strerror(errno));
-        return EX_OSERR;
+        fprintf(stderr, "error: unable to fork: %s\n", strerror(errno));
+        returncode = EXIT_FAILURE;
+        cleanup(0);
     }
     else if (pid == 0)
     {
-        try( close(child_read_fd) );
-        try( close(child_write_fd) );
-        try( dup2(child_stdin, STDIN_FILENO) );
-        try( dup2(child_stdout, STDOUT_FILENO) );
-        try( close(child_stdin) );
-        try( close(child_stdout) );
+        _assert(close(pipe_p2c.w) > -1);
+        _assert(close(pipe_c2p.r) > -1);
+        _assert(dup2(pipe_p2c.r, STDIN_FILENO) > -1);
+        _assert(dup2(pipe_c2p.w, STDOUT_FILENO) > -1);
+        _assert(close(pipe_p2c.r) > -1);
+        _assert(close(pipe_c2p.w) > -1);
 
-        char * * args = malloc(sizeof (*args) * argc);
-        memcpy(args, &argv[1], sizeof (*args) * (argc - 1));
-        args[argc - 1] = NULL;
-        try( execvp(child_name, args) );
+        if (execvp(chprocname, chargs) == -1)
+        {
+            fprintf(stderr, "error: unable to start process %s: %s\n", chprocname, strerror(errno));
+            returncode = EXIT_FAILURE;
+            cleanup(0);
+        }
     }
     else
     {
-        try( child_read_fp = fdopen(child_read_fd, "r") );
-        try( child_write_fp = fdopen(child_write_fd, "w") );
-
-        child_reader = reader_create(child_read_fp);
-
-        reader_start(&child_reader);
-
-        tui_init(child_name);
+        FILE * child_r_fp, * child_w_fp;
         char * line;
 
-        while (waitpid(pid, &retcode, WNOHANG) == 0)
+        _assert(close(pipe_p2c.r) > -1);
+        _assert(close(pipe_c2p.w) > -1);
+
+        child_r_fp = fdopen(pipe_c2p.r, "r");
+        child_w_fp = fdopen(pipe_p2c.w, "w");
+
+        _assert(child_r_fp != NULL);
+        _assert(child_w_fp != NULL);
+
+        child_rd = async_read_create(child_r_fp);
+        async_read_start(&child_rd);
+
+        tui_init();
+
+        while (waitpid(pid, &returncode, WNOHANG) == 0)
         {
-            if ((line = reader_getline(&child_reader)) != NULL)
+            line = async_read_line(&child_rd);
+            if (line)
             {
-                tui_write_output_line(line);
+                tui_write_line(line);
                 free(line);
             }
 
-            if ((line = tui_get_input_line()) != NULL)
+            line = tui_read_line();
+            if (line)
             {
-                fprintf(child_write_fp, "%s\n", line);
-                fflush(child_write_fp);
+                fprintf(child_w_fp, "%s\n", line);
+                fflush(child_w_fp);
                 free(line);
             }
 
@@ -116,26 +140,13 @@ int main(int argc, char *argv[])
             usleep(10);
         }
 
-        while ((line = reader_getline(&child_reader)) != NULL)
+        while ((line = async_read_line(&child_rd)))
         {
-            tui_write_output_line(line);
-            free(line);
+            tui_write_line(line);
         }
 
-        tui_update();
-
-        tui_wait_for_exit(retcode);
-
-        goto cleanup;
+        tui_prompt_exit(returncode);
     }
 
-cleanup:
-    reader_stop(&child_reader);
-    if (pipe_1[0] != -1) close(pipe_1[0]);
-    if (pipe_1[1] != -1) close(pipe_1[1]);
-    if (pipe_2[0] != -1) close(pipe_2[0]);
-    if (pipe_2[1] != -1) close(pipe_2[1]);
-    tui_terminate();
-
-    return retcode;
+    cleanup(0);
 }
