@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "async_read.h"
+#include "mem.h"
 
 struct async_read async_read_create (FILE * stream)
 {

@@ -12,6 +12,7 @@
 
 #include "async_read.h"
 #include "tui.h"
+#include "mem.h"
 
 #define _assert(x) { int __line = __LINE__;\
     if (!(x)) {\
@@ -127,6 +128,7 @@ int main(int argc, char *argv[])
 
         child_rd = async_read_create(child_r_fp);
         child_err_rd = async_read_create(child_err_fp);
+
         async_read_start(&child_rd);
         async_read_start(&child_err_rd);
 

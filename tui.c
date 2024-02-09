@@ -6,6 +6,7 @@
 #include <assert.h>
 
 #include "tui.h"
+#include "mem.h"
 
 #define CMD_BUFFER_MAX_SIZE 64
 #define CMD_WINDOW_HEIGHT 3
