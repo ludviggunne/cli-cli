@@ -95,6 +95,25 @@ static void complete_match(void)
     }
 }
 
+static void complete_match_word(void)
+{
+    if (matchid > -1)
+    {
+        int i = cmdbufsz;
+        const char * cmd = history[matchid];
+        while (cmd[i] != ' ' && cmd[i] != '\0')
+        {
+            i++;
+        }
+        while (cmd[i] == ' ')
+        {
+            i++;
+        }
+        strncpy(cmdbuf, cmd, i);
+        cmdbufsz = i;
+    }
+}
+
 static void history_append(const char * str, int len)
 {
     if (hcount == hcap)
@@ -306,7 +325,8 @@ void tui_update(void)
         case '\t':
         case KEY_RIGHT:
         {
-            complete_match();
+            //complete_match();
+            complete_match_word();
             match_reset();
             update = 1;
             break;
