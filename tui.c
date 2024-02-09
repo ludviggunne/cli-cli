@@ -30,6 +30,7 @@ enum color_pair {
 
 extern char ** chargs;
 extern int returncode;
+extern int pid;
 extern void cleanup(int);
 
 static char cmdbuf[CMD_BUFFER_MAX_SIZE + 1];
@@ -177,7 +178,15 @@ static void scroll_output(void)
 static void child_refresh(void)
 {
     box(child_win, 0, 0);
-    mvwprintw(child_win, 0, TITLE_X, " %s ", chargs[0]);
+    wmove(child_win, 0, TITLE_X);
+    char ** arg = chargs;
+    waddch(child_win, ' ');
+    while (*arg)
+    {
+        wprintw(child_win, "%s ", *arg);
+        arg++;
+    }
+    wprintw(child_win, "(pid: %d) ", pid);
     wrefresh(child_win);
 }
 
