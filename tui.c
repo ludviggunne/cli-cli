@@ -56,7 +56,7 @@ static void clear_cmdbuf(void)
 
 static void clear_cmdbuf_line(void)
 {
-    wmove(cmd_win, CMD_BUFFER_Y, CMD_BUFFER_X);
+    wmove(cmd_win, CMD_BUFFER_Y, 0);
     wclrtoeol(cmd_win);
 }
 
@@ -425,7 +425,7 @@ void tui_prompt_exit(int code)
     clear_cmdbuf_line();
     int pair = code == 0 ? COLOR_PAIR_OK : COLOR_PAIR_ERROR;
     wattron(cmd_win, COLOR_PAIR(pair));
-    mvwprintw(cmd_win, CMD_BUFFER_Y, CMD_BUFFER_X, "%s exited with return code %d. Press any key to exit.",
+    mvwprintw(cmd_win, CMD_BUFFER_Y, 2, "%s exited with return code %d. Press any key to exit.",
             chargs[0], code);
     wattroff(cmd_win, COLOR_PAIR(pair));
 
