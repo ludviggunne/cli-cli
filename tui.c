@@ -156,6 +156,7 @@ static void match_forward(void)
 {
     if (matchid > -1)
     {
+
         for (int i = matchid + 1; i < hcount; i++)
         {
             if (try_match(i))
@@ -165,6 +166,8 @@ static void match_forward(void)
             }
         }
     }
+
+    matchid = -1;
 }
 
 static void scroll_output(void)
