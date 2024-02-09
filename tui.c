@@ -299,8 +299,10 @@ void tui_update(void)
             if (isprint(in))
             {
                 cmdbuf_write_char(in);
-                // TODO: keep same match when you keep typing
-                match_reset();
+                if (matchid == -1 || !try_match(matchid))
+                {
+                    match_reset();
+                }
                 update = 1;
             }
             else
