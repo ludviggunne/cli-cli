@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     if (argc < 2)
     {
         fprintf(stderr, "error: missing input\n");
-        usage(argv[0]);
+        usage(stderr, argv[0]);
         return EXIT_FAILURE;
     }
 
