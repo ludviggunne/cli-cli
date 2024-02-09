@@ -173,7 +173,27 @@ static void flush_cmdbuf(void)
         free(ready_line);
     }
     ready_line = strndup(cmdbuf, cmdbufsz);
-    if (cmdbufsz > 0)
+
+    int is_previous;
+    if (hcount > 0)
+    {
+        const char * previous = history[hcount - 1];
+        if ((int) strlen(previous) == cmdbufsz &&
+                strncmp(previous, cmdbuf, cmdbufsz) == 0)
+        {
+            is_previous = 1;
+        }
+        else
+        {
+            is_previous = 0;
+        }
+    }
+    else
+    {
+        is_previous = 0;
+    }
+
+    if (cmdbufsz > 0 && !is_previous)
     {
         history_append(cmdbuf, cmdbufsz);
     }
