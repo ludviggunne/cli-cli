@@ -190,6 +190,7 @@ static void child_refresh(void)
         arg++;
     }
     wprintw(child_win, "(pid: %d) ", pid);
+    wmove(cmd_win, CMD_BUFFER_Y, CMD_BUFFER_X + cmdbufsz);
     wrefresh(child_win);
 }
 
@@ -201,6 +202,7 @@ static void cmd_refresh(void)
     box(cmd_win, 0, 0);
     mvwaddstr(cmd_win, 0, TITLE_X, " Input ");
     mvwaddstr(cmd_win, 1, 2, ">>");
+    wmove(cmd_win, CMD_BUFFER_Y, CMD_BUFFER_X + cmdbufsz);
     wrefresh(cmd_win);
 }
 
@@ -278,7 +280,7 @@ void tui_init(void)
     child_win = newwin(CHILD_WINDOW_HEIGHT, 0, 0, 0);
 
     noecho();
-    curs_set(0);
+    curs_set(2);
     keypad(cmd_win, TRUE);
     nodelay(cmd_win, TRUE);
 
@@ -428,6 +430,7 @@ void tui_prompt_exit(int code)
     wattroff(cmd_win, COLOR_PAIR(pair));
 
     box(cmd_win, 0, 0);
+    curs_set(0);
     wrefresh(cmd_win);
     child_refresh();
     (void) wgetch(cmd_win);
