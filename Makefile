@@ -16,9 +16,6 @@ async_read.o: async_read.c
 tui.o: tui.c
 	$(CC) -c tui.c $(CFLAGS)
 
-history.o: history.c
-	$(CC) -c history.c $(CFLAGS)
-
 .PHONY: clean
 clean:
 	rm -f *.o $(EXE)
